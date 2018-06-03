@@ -1,0 +1,380 @@
+var Db = require('mongodb').Db;
+
+var Connection = require('mongodb').Connection;
+
+var Server = require('mongodb').Server;
+
+var BSON = require('mongodb').BSON;
+
+var ObjectID = require('mongodb').ObjectID;
+
+
+
+EmployeeProvider = function(host, port) {
+
+  this.db= new Db('node-mongo-employee', new Server(host, port, {safe: false}, {auto_reconnect: true}, {}));
+
+  this.db.open(function(){});
+
+};
+
+
+
+
+
+EmployeeProvider.prototype.getCollection= function(callback) {
+
+  this.db.collection('employees', function(error, employee_collection) {
+
+    if( error ) callback(error);
+
+    else callback(null, employee_collection);
+
+  });
+
+};
+
+
+
+//find all employees
+
+EmployeeProvider.prototype.findAll = function(callback) {
+
+    this.getCollection(function(error, employee_collection) {
+
+      if( error ) callback(error)
+
+      else {
+
+        employee_collection.find().toArray(function(error, results) {
+
+          if( error ) callback(error)
+
+          else callback(null, results)
+
+        });
+
+      }
+
+    });
+
+};
+
+
+
+//find an employee by ID
+
+EmployeeProvider.prototype.findById = function(id, callback) {
+
+    this.getCollection(function(error, employee_collection) {
+
+      if( error ) callback(error)
+
+      else {
+
+        employee_collection.findOne({_id: employee_collection.db.bson_serializer.ObjectID.createFromHexString(id)}, function(error, result) {
+
+          if( error ) callback(error)
+
+          else callback(null, result)
+
+        });
+
+      }
+
+    });
+
+};
+
+
+
+
+
+//save new employee
+
+EmployeeProvider.prototype.save = function(employees, callback) {
+
+    this.getCollection(function(error, employee_collection) {
+
+      if( error ) callback(error)
+
+      else {
+
+        if( typeof(employees.length)=="undefined")
+
+          employees = [employees];
+
+
+
+        for( var i =0;i< employees.length;i++ ) {
+
+          employee = employees[i];
+
+          employee.created_at = new Date();
+
+        }
+
+
+
+        employee_collection.insert(employees, function() {
+
+          callback(null, employees);
+
+        });
+
+      }
+
+    });
+
+};
+
+
+
+// update an employee
+
+EmployeeProvider.prototype.update = function(employeeId, employees, callback) {
+
+    this.getCollection(function(error, employee_collection) {
+
+      if( error ) callback(error);
+
+      else {
+
+        employee_collection.update(
+
+					{_id: employee_collection.db.bson_serializer.ObjectID.createFromHexString(employeeId)},
+
+					employees,
+
+					function(error, employees) {
+
+						if(error) callback(error);
+
+						else callback(null, employees)       
+
+					});
+
+      }
+
+    });
+
+};
+
+
+
+//delete employee
+
+EmployeeProvider.prototype.delete = function(employeeId, callback) {
+
+	this.getCollection(function(error, employee_collection) {
+
+		if(error) callback(error);
+
+		else {
+
+			employee_collection.remove(
+
+				{_id: employee_collection.db.bson_serializer.ObjectID.createFromHexString(employeeId)},
+
+				function(error, employee){
+
+					if(error) callback(error);
+
+					else callback(null, employee)
+
+				});
+
+			}
+
+	});
+
+};
+
+
+
+exports.EmployeeProvider = EmployeeProvider;
+
+
+
+
+
+
+
+
+
+
+
+
+var express = require('express')
+
+  , routes = require('./routes')
+
+  , user = require('./routes/user')
+
+  , http = require('http')
+
+  , path = require('path')
+
+  , EmployeeProvider = require('./employeeprovider').EmployeeProvider;
+
+
+
+var app = express();
+
+
+
+app.configure(function(){
+
+  app.set('port', process.env.PORT || 3000);
+
+  app.set('views', __dirname + '/views');
+
+  app.set('view engine', 'jade');
+
+  app.set('view options', {layout: false});
+
+  app.use(express.favicon());
+
+  app.use(express.logger('dev'));
+
+  app.use(express.bodyParser());
+
+  app.use(express.methodOverride());
+
+  app.use(app.router);
+
+  app.use(require('stylus').middleware(__dirname + '/public'));
+
+  app.use(express.static(path.join(__dirname, 'public')));
+
+});
+
+
+
+app.configure('development', function(){
+
+  app.use(express.errorHandler());
+
+});
+
+
+
+var employeeProvider= new EmployeeProvider('localhost', 27017);
+
+
+
+//Routes
+
+
+
+//index
+
+app.get('/', function(req, res){
+
+  employeeProvider.findAll(function(error, emps){
+
+      res.render('index', {
+
+            title: 'Employees',
+
+            employees:emps
+
+        });
+
+  });
+
+});
+
+
+
+//new employee
+
+app.get('/employee/new', function(req, res) {
+
+    res.render('employee_new', {
+
+        title: 'New Employee'
+
+    });
+
+});
+
+
+
+//save new employee
+
+app.post('/employee/new', function(req, res){
+
+    employeeProvider.save({
+
+        title: req.param('title'),
+
+        name: req.param('name')
+
+    }, function( error, docs) {
+
+        res.redirect('/')
+
+    });
+
+});
+
+
+
+//update an employee
+
+app.get('/employee/:id/edit', function(req, res) {
+
+	employeeProvider.findById(req.param('_id'), function(error, employee) {
+
+		res.render('employee_edit',
+
+		{ 
+
+			title: employee.title,
+
+			employee: employee
+
+		});
+
+	});
+
+});
+
+
+
+//save updated employee
+
+app.post('/employee/:id/edit', function(req, res) {
+
+	employeeProvider.update(req.param('_id'),{
+
+		title: req.param('title'),
+
+		name: req.param('name')
+
+	}, function(error, docs) {
+
+		res.redirect('/')
+
+	});
+
+});
+
+
+
+//delete an employee
+
+app.post('/employee/:id/delete', function(req, res) {
+
+	employeeProvider.delete(req.param('_id'), function(error, docs) {
+
+		res.redirect('/')
+
+	});
+
+});
+
+
+
+app.listen(process.env.PORT || 3000);
