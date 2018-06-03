@@ -1,0 +1,131 @@
+var mysql = require('mysql');
+var http = require('http');
+var express = require('express');
+var app = express();
+var bodyParser = require('body-parser');
+//let date = require('date-and-time');
+var urlencodedParser = bodyParser.urlencoded({ extended: true });
+var con = mysql.createConnection({
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "stud"
+});
+app.get('/send', function (req, res) {
+var rr="<html>";
+rr = rr+"<body>";
+rr=rr+"<h1>Welcome to SIMS Service</h1>";
+ rr=rr+"<div> </div>";
+rr=rr+"<p>Please fill the details</p>"; 
+
+rr= rr+"<form method='post' action='add' >";
+rr = rr+"Name"+"<input type='text' minlength='4' maxlength='10' name='name' value=' '>";
+rr=rr+"\n";
+
+rr = rr+"USN"+"<input type='text'  name='usn' value=' '>";
+rr=rr+"<div> </div>";
+rr=rr+"<div><br></div>";
+rr = rr+"Attendence"+"<input type='text'  name='att' value=' '>";
+rr=rr+"\n";
+
+
+rr = rr+"CIE"+"<input type='text'  name='cie' value=' '>";
+rr=rr+"<div> <br></div>";
+rr = rr+"Branch"+"<input type='text'  name='branch' value=' '>";
+rr=rr+"<div> <br></div>";
+
+rr=rr+"\n";
+
+rr=rr+"<div><br></div>";
+//rr=rr+"Time"+"<input type='time' name='time' value=' '>";
+rr = rr+"<input type='submit' name='t1' value='Submit'>";
+rr = rr+"</form>"
+rr = rr+"</body>";
+rr=rr+"<h1>Check Elligibility</h1>";
+rr= rr+"<form method='post' action='add1' >";
+rr = rr+"USN"+"<input type='text'  name='usn' value=' '>";
+rr = rr+"Name"+"<input type='text'  name='name' value=' '>";
+
+rr = rr+"CIE"+"<input type='number'  name='cie' value=' '>";
+rr = rr+"Attendence"+"<input type='number'  name='att' value=' '>";
+
+rr = rr+"<input type='submit' name='t1' value='View '>";
+
+rr = rr+"</form>"
+res.send(rr);
+})
+
+
+app.post('/add', urlencodedParser, function (req, res){
+  a = req.body.name;
+   b= req.body.usn;
+   c=req.body.att;
+   d=req.body.cie;
+   e=req.body.branch;
+   
+   
+   //var datetime=new Date();
+
+    
+    //var c_time=datetime.getHours()+":"+datetime.getMinutes()+":"+datetime.getSeconds();
+
+   var sql = "INSERT INTO info(usn,name,att,cie,branch) values('" + b + "','" + a + "'," + c + "," + d + ",'" + e + "');";
+
+    
+    
+  
+  con.connect(function(err) {
+    if (err) throw err;
+    console.log("Connected!");
+  });
+    con.query(sql, function (err, result) {
+      if (err.code==='ER_DUP_ENTRY') {
+        console.log("Duplicate ");
+	
+   
+      }
+
+    });
+  
+  res.send("Your details has been added");
+ }).listen(8081);
+
+    
+
+
+
+app.post('/add1', urlencodedParser, function (req, res){
+ 
+ a = req.body.usn;
+  b = req.body.name;
+   c = req.body.cie;
+ d = req.body.att;   
+   
+
+con.connect(function(err) {
+  if (err) throw err;
+  console.log("Connected!");
+  
+  if(c>=8 && d>=80)
+  {
+  var sql = "INSERT INTO ht(usn,name) values('" + a + "','" + b + "');";
+ 
+  }
+ 
+  con.query(sql, function (err, result) {
+    if (err) throw err;
+    console.log("check");
+  });
+});
+  
+  res.send("Check table for elligibility");
+ }).listen(8082);
+
+
+
+
+ 
+ 
+
+ 
+ 
