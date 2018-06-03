@@ -1,0 +1,18 @@
+var mysql = require('mysql');
+
+var con = mysql.createConnection({
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "Bus"
+});
+
+con.connect(function(err) {
+  if (err) throw err;
+  console.log("Connected!");
+  var sql = "CREATE TABLE Booking (name varchar(30),cdate varchar(30),age int(5),source varchar(30),destination varchar(30),no_of_tickets int(5),PRIMARY KEY(name,cdate))";
+  con.query(sql, function (err, result) {
+    if (err) throw err;
+    console.log("Table created");
+  });
+});
